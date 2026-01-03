@@ -1,6 +1,6 @@
 module github.com/frkr-io/frkr-operator
 
-go 1.18
+go 1.25.0
 
 replace github.com/frkr-io/frkr-common => ../frkr-common
 
