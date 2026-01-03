@@ -10,6 +10,12 @@ This operator manages platform configuration via Kubernetes Custom Resource Defi
 - `FrkrDataPlane` - Data plane configuration (BYO CockroachDB/Redpanda)
 - `FrkrInit` - Database initialization (replaces frkr-init-core-stack)
 
+## Requirements
+
+- Go 1.21+ (required for Kubernetes client libraries)
+- Kubernetes cluster for deployment
+- kubectl configured
+
 ## Structure
 
 ```
@@ -42,7 +48,7 @@ frkr-operator/
 ## Dependencies
 
 - `frkr-common` - Shared library (plugin interfaces, migrations)
-- Kubernetes operator framework (kubebuilder or operator-sdk)
+- Kubernetes operator framework (controller-runtime)
 
 ## Features
 
@@ -56,4 +62,3 @@ frkr-operator/
 ## License
 
 Apache 2.0
-

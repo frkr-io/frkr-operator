@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
-	"github.com/frkr-io/frkr-common/internal/migrate"
+	"github.com/frkr-io/frkr-common/migrate"
 )
 
 // InitReconciler reconciles a FrkrInit object
