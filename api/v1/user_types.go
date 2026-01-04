@@ -8,14 +8,14 @@ import (
 type FrkrUserSpec struct {
 	// Username is the user's username
 	Username string `json:"username"`
-	
+
 	// Password is optional. If not provided, a random password will be generated
 	// +optional
 	Password string `json:"password,omitempty"`
-	
+
 	// TenantID is the tenant/organization ID this user belongs to
 	TenantID string `json:"tenantId"`
-	
+
 	// Roles are the user's roles
 	// +optional
 	Roles []string `json:"roles,omitempty"`
@@ -26,20 +26,20 @@ type FrkrUserStatus struct {
 	// Phase indicates the current phase of the user
 	// +optional
 	Phase string `json:"phase,omitempty"`
-	
+
 	// Password is the generated or provided password (one-time display only)
 	// This field is populated only once when the user is created
 	// +optional
 	Password string `json:"password,omitempty"`
-	
+
 	// PasswordGenerated indicates if the password was auto-generated
 	// +optional
 	PasswordGenerated bool `json:"passwordGenerated,omitempty"`
-	
+
 	// LastPasswordReset is the timestamp of the last password reset
 	// +optional
 	LastPasswordReset *metav1.Time `json:"lastPasswordReset,omitempty"`
-	
+
 	// Conditions represent the latest available observations of the user's state
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -72,4 +72,3 @@ type FrkrUserList struct {
 func init() {
 	SchemeBuilder.Register(&FrkrUser{}, &FrkrUserList{})
 }
-

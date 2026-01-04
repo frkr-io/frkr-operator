@@ -2,8 +2,6 @@ package controller
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -13,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/frkr-io/frkr-common/util"
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 )
 
@@ -39,12 +38,12 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Generate password if not provided
 	password := user.Spec.Password
 	if password == "" {
-		// Generate random password
-		passwordBytes := make([]byte, 32)
-		if _, err := rand.Read(passwordBytes); err != nil {
+		// Generate random password using shared utility
+		var err error
+		password, err = util.GeneratePassword()
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to generate password: %w", err)
 		}
-		password = base64.URLEncoding.EncodeToString(passwordBytes)
 		user.Status.PasswordGenerated = true
 	}
 
@@ -70,9 +69,23 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if err := r.Create(ctx, secret); err != nil {
-		logger.Error(err, "failed to create secret")
-		// Continue even if secret creation fails (may already exist)
+	// Create or update secret
+	existingSecret := &corev1.Secret{}
+	err := r.Get(ctx, client.ObjectKeyFromObject(secret), existingSecret)
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to check for existing secret: %w", err)
+		}
+		// Secret doesn't exist, create it
+		if err := r.Create(ctx, secret); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create secret: %w", err)
+		}
+	} else {
+		// Secret exists, update it
+		existingSecret.Data = secret.Data
+		if err := r.Update(ctx, existingSecret); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update secret: %w", err)
+		}
 	}
 
 	// Update status
@@ -90,4 +103,3 @@ func (r *UserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&frkrv1.FrkrUser{}).
 		Complete(r)
 }
-

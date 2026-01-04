@@ -38,6 +38,13 @@ func SetupControllers(mgr manager.Manager) error {
 		return err
 	}
 
+	// Setup Stream controller
+	if err := (&StreamReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	return nil
 }
-

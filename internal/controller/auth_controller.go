@@ -66,4 +66,3 @@ func (r *AuthConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&frkrv1.FrkrAuthConfig{}).
 		Complete(r)
 }
-

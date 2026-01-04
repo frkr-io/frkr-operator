@@ -28,6 +28,11 @@ Thumbs.db
 /bin/
 /dist/
 
+# Binaries (should be in bin/, but ignore if accidentally built in root)
+/frkrctl
+/operator
+/manager
+
 # Operator-specific
 config/crd/bases/
 config/rbac/role.yaml

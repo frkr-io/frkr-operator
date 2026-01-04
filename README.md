@@ -7,7 +7,7 @@ Kubernetes operator for managing the Traffic Mirroring Platform configuration.
 This operator manages platform configuration via Kubernetes Custom Resource Definitions (CRDs):
 - `FrkrUser` - User provisioning
 - `FrkrAuthConfig` - Auth configuration (basic ↔ OIDC)
-- `FrkrDataPlane` - Data plane configuration (BYO CockroachDB/Redpanda)
+- `FrkrDataPlane` - Data plane configuration (BYO PostgreSQL-compatible DB and Kafka-compatible broker)
 - `FrkrInit` - Database initialization (replaces frkr-init-core-stack)
 
 ## Requirements
@@ -27,7 +27,7 @@ frkr-operator/
 │   ├── controller/          # CRD controllers
 │   │   ├── user.go
 │   │   ├── auth.go
-│   │   ├── datapane.go
+│   │   ├── dataplane_controller.go
 │   │   ├── ingress.go
 │   │   └── init.go
 │   ├── reconciler/          # Reconciliation logic
@@ -58,6 +58,34 @@ frkr-operator/
 - Data plane configuration (validates connectivity, warns on errors)
 - Ingress configuration (Envoy required, auto-configured, BYO certs)
 - Database initialization (runs migrations via golang-migrate)
+
+## Building
+
+See [BUILD.md](BUILD.md) for detailed build instructions, including:
+- Prerequisites (Go 1.21+, controller-gen)
+- Code generation steps (DeepCopy methods)
+- Troubleshooting common issues
+
+## Testing
+
+See [TESTING.md](TESTING.md) for comprehensive testing guide, including:
+- Unit test examples
+- Integration test setup
+- Running tests
+- Test coverage
+
+**Quick Start**:
+```bash
+# Install controller-gen
+go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+export PATH=$PATH:$(go env GOPATH)/bin
+
+# Generate code
+make generate
+
+# Build
+make build
+```
 
 ## License
 

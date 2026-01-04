@@ -17,7 +17,7 @@ const (
 type FrkrAuthConfigSpec struct {
 	// Type is the authentication type (basic or oidc)
 	Type AuthType `json:"type"`
-	
+
 	// OIDCConfig is the OIDC configuration (required if type is oidc)
 	// +optional
 	OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty"`
@@ -27,13 +27,13 @@ type FrkrAuthConfigSpec struct {
 type OIDCConfig struct {
 	// IssuerURL is the OIDC issuer URL
 	IssuerURL string `json:"issuerUrl"`
-	
+
 	// ClientID is the OIDC client ID
 	ClientID string `json:"clientId"`
-	
+
 	// ClientSecret is the OIDC client secret (stored in secret)
 	ClientSecretRef string `json:"clientSecretRef"`
-	
+
 	// Scopes are the OIDC scopes to request
 	// +optional
 	Scopes []string `json:"scopes,omitempty"`
@@ -44,11 +44,11 @@ type FrkrAuthConfigStatus struct {
 	// Phase indicates the current phase of the auth configuration
 	// +optional
 	Phase string `json:"phase,omitempty"`
-	
+
 	// PreviousType is the previous auth type (used for cleanup)
 	// +optional
 	PreviousType AuthType `json:"previousType,omitempty"`
-	
+
 	// Conditions represent the latest available observations
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -80,4 +80,3 @@ type FrkrAuthConfigList struct {
 func init() {
 	SchemeBuilder.Register(&FrkrAuthConfig{}, &FrkrAuthConfigList{})
 }
-

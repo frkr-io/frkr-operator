@@ -27,7 +27,7 @@ manifests: controller-gen ## Generate CustomResourceDefinition objects.
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile=".tools/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -44,8 +44,20 @@ test: manifests generate fmt vet ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/operator/main.go
+build: generate fmt vet ## Build all binaries.
+	@mkdir -p bin
+	go build -o bin/operator cmd/operator/main.go
+	go build -o bin/frkrctl cmd/frkrctl/main.go
+
+.PHONY: build-operator
+build-operator: generate fmt vet ## Build operator binary only.
+	@mkdir -p bin
+	go build -o bin/operator cmd/operator/main.go
+
+.PHONY: build-frkrctl
+build-frkrctl: fmt vet ## Build frkrctl binary only.
+	@mkdir -p bin
+	go build -o bin/frkrctl cmd/frkrctl/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

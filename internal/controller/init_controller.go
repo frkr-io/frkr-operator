@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 	"github.com/frkr-io/frkr-common/migrate"
+	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 )
 
 // InitReconciler reconciles a FrkrInit object
@@ -23,7 +24,7 @@ type InitReconciler struct {
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrinits,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrinits/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrinits/finalizers,verbs=update
-//+kubebuilder:rbac:groups=frkr.io,resources=frkrdatapanes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=frkr.io,resources=frkrdataplanes,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -47,7 +48,8 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		dataPlane := dataPlaneList.Items[0]
 		// Build connection string from data plane config
-		dbURL = fmt.Sprintf("cockroachdb://%s@%s:%d/%s?sslmode=%s",
+		// Use postgres:// scheme for compatibility with lib/pq
+		dbURL = fmt.Sprintf("postgres://%s@%s:%d/%s?sslmode=%s",
 			dataPlane.Spec.PostgresConfig.User,
 			dataPlane.Spec.PostgresConfig.Host,
 			dataPlane.Spec.PostgresConfig.Port,
@@ -66,8 +68,8 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err := migrate.RunMigrations(dbURL, migrationsPath); err != nil {
 		logger.Error(err, "failed to run migrations")
 		init.Status.Phase = "Failed"
-		init.Status.Conditions = append(init.Status.Conditions, metav1.Condition{
-			Type:    "MigrationsFailed",
+		meta.SetStatusCondition(&init.Status.Conditions, metav1.Condition{
+			Type:    "MigrationsComplete",
 			Status:  metav1.ConditionFalse,
 			Reason:  "MigrationError",
 			Message: err.Error(),
@@ -89,7 +91,7 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Update status
 	init.Status.Phase = "Initialized"
-	init.Status.Conditions = append(init.Status.Conditions, metav1.Condition{
+	meta.SetStatusCondition(&init.Status.Conditions, metav1.Condition{
 		Type:    "MigrationsComplete",
 		Status:  metav1.ConditionTrue,
 		Reason:  "Success",
@@ -110,4 +112,3 @@ func (r *InitReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&frkrv1.FrkrInit{}).
 		Complete(r)
 }
-

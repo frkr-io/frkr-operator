@@ -9,7 +9,7 @@ type FrkrInitSpec struct {
 	// MigrationsPath is the path to migration files
 	// +optional
 	MigrationsPath string `json:"migrationsPath,omitempty"`
-	
+
 	// DatabaseURL is the database connection URL
 	// If not provided, will use FrkrDataPlane configuration
 	// +optional
@@ -21,15 +21,15 @@ type FrkrInitStatus struct {
 	// Phase indicates the current phase
 	// +optional
 	Phase string `json:"phase,omitempty"`
-	
+
 	// Version is the current migration version
 	// +optional
 	Version uint `json:"version,omitempty"`
-	
+
 	// Dirty indicates if the database is in a dirty state
 	// +optional
 	Dirty bool `json:"dirty,omitempty"`
-	
+
 	// Conditions represent the latest available observations
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -63,4 +63,3 @@ type FrkrInitList struct {
 func init() {
 	SchemeBuilder.Register(&FrkrInit{}, &FrkrInitList{})
 }
-
