@@ -12,6 +12,10 @@ import (
 
 // getK8sClient creates and returns a Kubernetes client configured for frkr CRDs.
 // This is a shared utility to avoid code duplication across frkrctl commands.
+//
+// TODO: Consider moving this to frkr-common/k8s/client.go if frkr-tools needs
+// to interact with the operator (e.g., for CRD-based operations). Currently
+// this is operator-specific as it requires frkr CRD types.
 func getK8sClient() (client.Client, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {

@@ -1,6 +1,6 @@
 # frkr-operator
 
-Kubernetes operator for managing the Traffic Mirroring Platform configuration.
+Kubernetes operator for managing frkr configuration.
 
 ## Purpose
 

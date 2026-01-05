@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/frkr-io/frkr-common/util"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,9 +33,17 @@ var streamCreateCmd = &cobra.Command{
 			return fmt.Errorf("--tenant-id is required")
 		}
 
-		if retentionDays == 0 {
-			retentionDays = 7
+		// Use shared stream name validation
+		if err := util.ValidateStreamName(streamName); err != nil {
+			return err
 		}
+
+		// Normalize and validate retention days
+		normalizedDays, err := util.NormalizeRetentionDays(retentionDays)
+		if err != nil {
+			return err
+		}
+		retentionDays = normalizedDays
 
 		// Get k8s client
 		k8sClient, err := getK8sClient()
