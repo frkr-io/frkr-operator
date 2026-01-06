@@ -13,12 +13,14 @@ import (
 
 	"github.com/frkr-io/frkr-common/util"
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
+	"github.com/frkr-io/frkr-operator/internal/infra"
 )
 
 // UserReconciler reconciles a FrkrUser object
 type UserReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	DB     *infra.DB
 }
 
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrusers,verbs=get;list;watch;create;update;patch;delete
@@ -51,6 +53,23 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if user.Status.Password == "" {
 		user.Status.Password = password
 		user.Status.Phase = "Active"
+	}
+
+	// Step 1: Ensure tenant exists
+	if r.DB != nil {
+		tenantID, err := r.DB.EnsureTenant(user.Spec.TenantID)
+		if err != nil {
+			logger.Error(err, "failed to ensure tenant")
+			return ctrl.Result{RequeueAfter: 30}, err
+		}
+
+		// Step 2: Persist user in database
+		// NOTE: In a real app, you'd hash the password here if using Postgres for auth.
+		// For now, the gateways accept any non-empty password as per current refactored code.
+		if err := r.DB.EnsureUser(tenantID, user.Spec.Username, password); err != nil {
+			logger.Error(err, "failed to persist user in database")
+			return ctrl.Result{RequeueAfter: 30}, err
+		}
 	}
 
 	// Create Kubernetes secret for credentials
