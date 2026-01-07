@@ -6,6 +6,7 @@ Kubernetes operator for managing frkr configuration.
 
 This operator manages platform configuration via Kubernetes Custom Resource Definitions (CRDs):
 - `FrkrUser` - User provisioning
+- `FrkrStream` - Stream management (retention, description)
 - `FrkrAuthConfig` - Auth configuration (basic ↔ OIDC)
 - `FrkrDataPlane` - Data plane configuration (BYO PostgreSQL-compatible DB and Kafka-compatible broker)
 - `FrkrInit` - Database initialization (replaces frkr-init-core-stack)
@@ -21,15 +22,17 @@ This operator manages platform configuration via Kubernetes Custom Resource Defi
 ```
 frkr-operator/
 ├── cmd/
-│   └── operator/
+│   ├── operator/            # Operator entry point
+│   │   └── main.go
+│   └── frkrctl/             # CLI for managing CRDs
 │       └── main.go
 ├── internal/
 │   ├── controller/          # CRD controllers
-│   │   ├── user.go
-│   │   ├── auth.go
+│   │   ├── user_controller.go
+│   │   ├── auth_controller.go
 │   │   ├── dataplane_controller.go
-│   │   ├── ingress.go
-│   │   └── init.go
+│   │   ├── stream_controller.go
+│   │   └── init_controller.go
 │   ├── reconciler/          # Reconciliation logic
 │   └── k8s/                 # Kubernetes client utilities
 ├── api/
@@ -37,6 +40,7 @@ frkr-operator/
 │       ├── user_types.go
 │       ├── auth_types.go
 │       ├── datapane_types.go
+│       ├── stream_types.go
 │       └── init_types.go
 ├── config/
 │   └── crd/                 # CRD manifests
@@ -53,6 +57,7 @@ frkr-operator/
 ## Features
 
 - User provisioning with password generation (one-time display in status)
+- Stream management (create/update/delete Kafka topics and DB entries)
 - Password reset support
 - Auth configuration switching (deletes basic auth users on switch)
 - Data plane configuration (validates connectivity, warns on errors)
