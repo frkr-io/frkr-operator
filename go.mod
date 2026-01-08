@@ -3,7 +3,7 @@ module github.com/frkr-io/frkr-operator
 go 1.25.0
 
 require (
-	github.com/frkr-io/frkr-common v0.1.4
+	github.com/frkr-io/frkr-common v0.1.9
 	github.com/lib/pq v1.10.9
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.3
