@@ -20,7 +20,7 @@ func SetupControllers(mgr manager.Manager) error {
 
 	var db *infra.DB
 	if config.DatabaseURL != "" {
-		db, err = infra.NewDB(config.DatabaseURL)
+		db, err = infra.ConnectInfraDB(config.DatabaseURL)
 		if err != nil {
 			setupLog.Error(err, "unable to connect to database")
 		}

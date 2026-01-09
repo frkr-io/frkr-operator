@@ -12,14 +12,14 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// Config holds database and broker connection details
-type Config struct {
+// InfraConfig holds database and broker connection details
+type InfraConfig struct {
 	DatabaseURL string
 	BrokerURL   string
 }
 
 // GetConfigFromEnv reads infrastructure configuration from environment variables
-func GetConfigFromEnv() (*Config, error) {
+func GetConfigFromEnv() (*InfraConfig, error) {
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		dbURL = "postgres://root@frkr-cockroachdb:26257/frkrdb?sslmode=disable"
@@ -30,7 +30,7 @@ func GetConfigFromEnv() (*Config, error) {
 		brokerURL = "frkr-redpanda:9092"
 	}
 
-	return &Config{
+	return &InfraConfig{
 		DatabaseURL: dbURL,
 		BrokerURL:   brokerURL,
 	}, nil
@@ -41,8 +41,8 @@ type DB struct {
 	*sql.DB
 }
 
-// NewDB creates a new database connection
-func NewDB(connString string) (*DB, error) {
+// ConnectInfraDB creates a new database connection
+func ConnectInfraDB(connString string) (*DB, error) {
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
