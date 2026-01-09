@@ -17,11 +17,6 @@ import (
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 )
 
-func TestDataPlaneReconciler(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "DataPlane Controller Suite")
-}
-
 var _ = Describe("DataPlaneReconciler", func() {
 	var (
 		ctx        context.Context

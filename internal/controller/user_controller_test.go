@@ -17,11 +17,6 @@ import (
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 )
 
-func TestUserReconciler(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "User Controller Suite")
-}
-
 var _ = Describe("UserReconciler", func() {
 	var (
 		ctx        context.Context
