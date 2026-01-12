@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	commondb "github.com/frkr-io/frkr-common/db"
 	_ "github.com/lib/pq"
 	"github.com/segmentio/kafka-go"
 )
@@ -58,87 +59,34 @@ func ConnectInfraDB(connString string) (*DB, error) {
 
 // EnsureTenant creates a tenant if it doesn't exist, returns tenant ID
 func (db *DB) EnsureTenant(tenantName string) (string, error) {
-	var tenantID string
-
-	// Try to get existing tenant
-	err := db.QueryRow(`
-		SELECT id FROM tenants 
-		WHERE name = $1 AND deleted_at IS NULL
-	`, tenantName).Scan(&tenantID)
-
-	if err == nil {
-		return tenantID, nil
-	}
-
-	if err != sql.ErrNoRows {
-		return "", fmt.Errorf("failed to query tenant: %w", err)
-	}
-
-	// Create new tenant
-	err = db.QueryRow(`
-		INSERT INTO tenants (name, plan) 
-		VALUES ($1, 'free') 
-		RETURNING id
-	`, tenantName).Scan(&tenantID)
-
+	tenant, err := commondb.CreateOrGetTenant(db.DB, tenantName)
 	if err != nil {
-		return "", fmt.Errorf("failed to create tenant: %w", err)
+		return "", err
 	}
-
-	return tenantID, nil
+	return tenant.ID, nil
 }
 
 // CreateStream creates a stream record in the database
 func (db *DB) CreateStream(tenantID, name, description string, retentionDays int) (streamID, topic string, err error) {
-	// Generate topic name
-	topic = GenerateTopicName(tenantID, name)
-
-	err = db.QueryRow(`
-		INSERT INTO streams (tenant_id, name, description, retention_days, topic, status)
-		VALUES ($1, $2, $3, $4, $5, 'active')
-		ON CONFLICT (tenant_id, name) DO UPDATE SET
-			description = EXCLUDED.description,
-			retention_days = EXCLUDED.retention_days,
-			updated_at = now()
-		RETURNING id, topic
-	`, tenantID, name, description, retentionDays, topic).Scan(&streamID, &topic)
-
+	stream, err := commondb.CreateStream(db.DB, tenantID, name, description, retentionDays)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create stream: %w", err)
+		return "", "", err
 	}
-
-	return streamID, topic, nil
+	return stream.ID, stream.Topic, nil
 }
 
 // GetStream retrieves a stream by name
 func (db *DB) GetStream(tenantID, name string) (streamID, topic string, err error) {
-	err = db.QueryRow(`
-		SELECT id, topic FROM streams 
-		WHERE tenant_id = $1 AND name = $2 AND deleted_at IS NULL
-	`, tenantID, name).Scan(&streamID, &topic)
-
+	stream, err := commondb.GetStream(db.DB, tenantID, name)
 	if err != nil {
-		return "", "", fmt.Errorf("stream not found: %w", err)
+		return "", "", err
 	}
-
-	return streamID, topic, nil
+	return stream.ID, stream.Topic, nil
 }
 
-// GenerateTopicName creates a Kafka-compatible topic name
+// GenerateTopicName delegates to common implementation
 func GenerateTopicName(tenantID, streamName string) string {
-	// Sanitize for topic name
-	safeTenant := strings.ToLower(strings.ReplaceAll(tenantID, "-", ""))
-	safeName := strings.ToLower(strings.ReplaceAll(streamName, " ", "-"))
-
-	// Remove non-alphanumeric characters except hyphens
-	safeName = strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			return r
-		}
-		return -1
-	}, safeName)
-
-	return fmt.Sprintf("stream-%s-%s", safeTenant[:min(8, len(safeTenant))], safeName)
+	return commondb.GenerateTopicName(tenantID, streamName)
 }
 
 // KafkaAdmin wraps Kafka admin operations
@@ -191,20 +139,10 @@ func (k *KafkaAdmin) CreateTopic(topicName string, numPartitions, replicationFac
 	return nil
 }
 
-// EnsureUser creates a user in the database or updates password
+// EnsureUser creates a user in the database
+// Note: This logic was previously placeholder, now using shared implementation
 func (db *DB) EnsureUser(tenantID, username, password string) error {
-	// For now, we don't have a users table in the current migrations,
-	// but the gateways use ValidateBasicAuthForStream which current accepts any non-empty credentials.
-	// We'll add this placeholder implementation to satisfy the reconciler
-	// and add a TODO to create a users table if it becomes necessary.
-
-	// TODO: Create 'users' table in migrations and implement persistence here
-	return nil
+	_, err := commondb.CreateUser(db.DB, tenantID, username, password)
+	return err
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
