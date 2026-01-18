@@ -145,4 +145,3 @@ func (db *DB) EnsureUser(tenantID, username, password string) error {
 	_, err := commondb.CreateUser(db.DB, tenantID, username, password)
 	return err
 }
-
