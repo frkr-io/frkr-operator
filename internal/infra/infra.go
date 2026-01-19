@@ -9,9 +9,14 @@ import (
 	"time"
 
 	commondb "github.com/frkr-io/frkr-common/db"
+	"github.com/frkr-io/frkr-common/models"
 	_ "github.com/lib/pq"
 	"github.com/segmentio/kafka-go"
 )
+
+// ... (imports)
+
+// ... (rest of file)
 
 // InfraConfig holds database and broker connection details
 type InfraConfig struct {
@@ -144,4 +149,21 @@ func (k *KafkaAdmin) CreateTopic(topicName string, numPartitions, replicationFac
 func (db *DB) EnsureUser(tenantID, username, password string) error {
 	_, err := commondb.CreateUser(db.DB, tenantID, username, password)
 	return err
+}
+
+// EnsureClient creates a client credential in the database, or retrieves it if it already exists
+func (db *DB) EnsureClient(tenantID, clientID, clientSecret string, streamID *string) (*models.ClientCredential, error) {
+	client, err := commondb.CreateClient(db.DB, tenantID, clientID, clientSecret, streamID)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			// Try to get existing client
+			existing, getErr := commondb.GetClient(db.DB, tenantID, clientID)
+			if getErr != nil {
+				return nil, fmt.Errorf("failed to create client: %v, and failed to get existing: %v", err, getErr)
+			}
+			return existing, nil
+		}
+		return nil, err
+	}
+	return client, nil
 }

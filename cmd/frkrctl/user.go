@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,8 +52,32 @@ var userCreateCmd = &cobra.Command{
 		}
 
 		fmt.Printf("✅ User %s created successfully\n", username)
-		fmt.Printf("Check status with: kubectl get frkruser %s -o yaml\n", username)
-		return nil
+		fmt.Println("Waiting for password generation...")
+
+		// Poll for secret
+		timeout := time.After(30 * time.Second)
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-timeout:
+				fmt.Printf("⚠️  Timed out waiting for password. Check status with: kubectl get secret frkr-user-%s -o yaml\n", username)
+				return nil
+			case <-ticker.C:
+				var secret corev1.Secret
+				if err := k8sClient.Get(context.Background(), client.ObjectKey{
+					Name:      fmt.Sprintf("frkr-user-%s", username),
+					Namespace: getNamespace(),
+				}, &secret); err == nil {
+					if pass, ok := secret.Data["password"]; ok {
+						fmt.Printf("\n🔑 Password: %s\n\n", string(pass))
+						fmt.Println("Save this password! It will not be shown again.")
+						return nil
+					}
+				}
+			}
+		}
 	},
 }
 

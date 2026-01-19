@@ -13,6 +13,7 @@ import (
 
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
 	"github.com/frkr-io/frkr-operator/internal/controller"
+	"github.com/frkr-io/frkr-operator/internal/infra"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -58,6 +59,38 @@ func main() {
 	// Setup controllers
 	if err = controller.SetupControllers(mgr); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
+		os.Exit(1)
+	}
+	
+	// Initialize Infra DB
+	infraConfig, err := infra.GetConfigFromEnv()
+	if err != nil {
+		setupLog.Error(err, "unable to get infra config")
+		os.Exit(1)
+	}
+	
+	db, err := infra.ConnectInfraDB(infraConfig.DatabaseURL)
+	if err != nil {
+		setupLog.Error(err, "unable to connect to database")
+		os.Exit(1)
+	}
+
+	// Register specific reconcilers that need DB access
+	if err = (&controller.TenantReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		DB:     db,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "FrkrTenant")
+		os.Exit(1)
+	}
+
+	if err = (&controller.ClientReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		DB:     db,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "FrkrClient")
 		os.Exit(1)
 	}
 
