@@ -28,8 +28,9 @@ func TestDatabaseCompatibility(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Create temporary migrations
-	migrationsPath := createTempMigrations(t)
-	defer os.RemoveAll(migrationsPath)
+	// 1. Use embedded migrations
+	// migrationsPath := createTempMigrations(t)
+	// defer os.RemoveAll(migrationsPath)
 
 	// 2. Test Postgres
 	t.Run("Postgres", func(t *testing.T) {
@@ -52,11 +53,12 @@ func TestDatabaseCompatibility(t *testing.T) {
 
 		// Postgres uses "postgres://" scheme by default from ConnectionString
 		// Test migrations
-		err = migrate.RunMigrations(connStr, migrationsPath)
+		// Test migrations
+		err = migrate.RunMigrations(connStr)
 		assert.NoError(t, err, "Migrations should succeed on Postgres")
 		
 		// Verify version
-		version, dirty, err := migrate.GetVersion(connStr, migrationsPath)
+		version, dirty, err := migrate.GetVersion(connStr)
 		assert.NoError(t, err)
 		assert.Equal(t, uint(1), version)
 		assert.False(t, dirty)
@@ -90,11 +92,12 @@ func TestDatabaseCompatibility(t *testing.T) {
 		t.Logf("Testing with URL: %s", crdbConnStr)
 
 		// Test migrations
-		err = migrate.RunMigrations(crdbConnStr, migrationsPath)
+		// Test migrations
+		err = migrate.RunMigrations(crdbConnStr)
 		assert.NoError(t, err, "Migrations should succeed on CockroachDB with cockroachdb:// scheme")
 
 		// Verify version
-		version, dirty, err := migrate.GetVersion(crdbConnStr, migrationsPath)
+		version, dirty, err := migrate.GetVersion(crdbConnStr)
 		assert.NoError(t, err)
 		assert.Equal(t, uint(1), version)
 		assert.False(t, dirty)
