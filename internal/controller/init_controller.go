@@ -87,14 +87,8 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		)
 	}
 
-	// Get migrations path
-	migrationsPath := init.Spec.MigrationsPath
-	if migrationsPath == "" {
-		migrationsPath = "/migrations" // Default path
-	}
-
 	// Run migrations
-	if err := migrate.RunMigrations(dbURL, migrationsPath); err != nil {
+	if err := migrate.RunMigrations(dbURL); err != nil {
 		logger.Error(err, "failed to run migrations")
 		init.Status.Phase = "Failed"
 		meta.SetStatusCondition(&init.Status.Conditions, metav1.Condition{
@@ -110,7 +104,7 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Get version
-	version, dirty, err := migrate.GetVersion(dbURL, migrationsPath)
+	version, dirty, err := migrate.GetVersion(dbURL)
 	if err != nil {
 		logger.Error(err, "failed to get migration version")
 	} else {
