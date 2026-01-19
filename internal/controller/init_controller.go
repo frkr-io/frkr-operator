@@ -14,6 +14,8 @@ import (
 
 	"github.com/frkr-io/frkr-common/migrate"
 	frkrv1 "github.com/frkr-io/frkr-operator/api/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // InitReconciler reconciles a FrkrInit object
@@ -56,9 +58,28 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			scheme = "cockroachdb"
 		}
 		
-		dbURL = fmt.Sprintf("%s://%s@%s:%d/%s?sslmode=%s",
+		// Get Password from Secret
+		var secret corev1.Secret
+		password := ""
+		if dataPlane.Spec.PostgresConfig.PasswordRef != "" {
+			secretName := dataPlane.Spec.PostgresConfig.PasswordRef
+			if err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: init.Namespace}, &secret); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to get password secret %s: %w", secretName, err)
+			}
+			// Assume key is "password" based on convention, or check multiple?
+			// frkr-db-secret uses "password".
+			if PassBytes, ok := secret.Data["password"]; ok {
+				password = string(PassBytes)
+			} else {
+				// Fallback or error?
+				return ctrl.Result{}, fmt.Errorf("secret %s does not contain 'password' key", secretName)
+			}
+		}
+
+		dbURL = fmt.Sprintf("%s://%s:%s@%s:%d/%s?sslmode=%s",
 			scheme,
 			dataPlane.Spec.PostgresConfig.User,
+			password,
 			dataPlane.Spec.PostgresConfig.Host,
 			dataPlane.Spec.PostgresConfig.Port,
 			dataPlane.Spec.PostgresConfig.Database,
