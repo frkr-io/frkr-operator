@@ -34,6 +34,12 @@ type DatabaseConfig struct {
 	// SSLMode is the SSL mode (require, disable, etc.)
 	// +optional
 	SSLMode string `json:"sslMode,omitempty"`
+
+	// Type is the database type (postgres, cockroachdb)
+	// +optional
+	// +kubebuilder:default=postgres
+	// +kubebuilder:validation:Enum=postgres;cockroachdb
+	Type string `json:"type,omitempty"`
 }
 
 // MessageQueueConfig defines message queue configuration

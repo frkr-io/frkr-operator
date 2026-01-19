@@ -14,6 +14,10 @@ type FrkrInitSpec struct {
 	// If not provided, will use FrkrDataPlane configuration
 	// +optional
 	DatabaseURL string `json:"databaseUrl,omitempty"`
+
+	// Gateways is a list of Gateway Deployments to verify after migration
+	// +optional
+	Gateways []string `json:"gateways,omitempty"`
 }
 
 // FrkrInitStatus defines the observed state of FrkrInit

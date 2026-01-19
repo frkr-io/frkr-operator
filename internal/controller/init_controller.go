@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +26,7 @@ type InitReconciler struct {
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrinits/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrinits/finalizers,verbs=update
 //+kubebuilder:rbac:groups=frkr.io,resources=frkrdataplanes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -48,8 +50,14 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		dataPlane := dataPlaneList.Items[0]
 		// Build connection string from data plane config
-		// Use postgres:// scheme for compatibility with lib/pq
-		dbURL = fmt.Sprintf("postgres://%s@%s:%d/%s?sslmode=%s",
+		// Determine scheme based on Type (default to postgres)
+		scheme := "postgres"
+		if dataPlane.Spec.PostgresConfig.Type == "cockroachdb" {
+			scheme = "cockroachdb"
+		}
+		
+		dbURL = fmt.Sprintf("%s://%s@%s:%d/%s?sslmode=%s",
+			scheme,
 			dataPlane.Spec.PostgresConfig.User,
 			dataPlane.Spec.PostgresConfig.Host,
 			dataPlane.Spec.PostgresConfig.Port,
@@ -89,13 +97,44 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		init.Status.Dirty = dirty
 	}
 
+	// Check Gateways (only if migrations successful and not dirty)
+	// We do this BEFORE setting the final "Ready" status
+	gatewaysReady, err := r.checkGateways(ctx, &init)
+	if err != nil {
+		logger.Error(err, "failed to check gateways")
+		// continue to report partial status, or return error?
+		// Retrying is fine.
+		return ctrl.Result{}, err
+	}
+	
+	if !gatewaysReady && len(init.Spec.Gateways) > 0 {
+		logger.Info("waiting for gateways to be ready...", "gateways", init.Spec.Gateways)
+		// Requeue to check again effectively
+		// But first update status to show Migration Success but "Waiting for Gateways"
+		// We can add a specialized condition or just keep Ready=False
+		meta.SetStatusCondition(&init.Status.Conditions, metav1.Condition{
+			Type:    "Ready",
+			Status:  metav1.ConditionFalse,
+			Reason:  "WaitingForGateways",
+			Message: "Migrations complete, waiting for gateways",
+		})
+		if err := r.Status().Update(ctx, &init); err != nil {
+			return ctrl.Result{}, err
+		}
+		// Requeue after some time to poll
+		// Controller runtime naturally requeues on status update, but for external resource change (deployments)
+		// we should watch them? We added RBAC but didn't add Watch in SetupWithManager. 
+		// We should add that for responsiveness, or poll. Poll is easier for now.
+		return ctrl.Result{RequeueAfter: 10 * 1000 * 1000 * 1000}, nil // 10s
+	}
+
 	// Update status
 	init.Status.Phase = "Initialized"
 	meta.SetStatusCondition(&init.Status.Conditions, metav1.Condition{
-		Type:    "MigrationsComplete",
+		Type:    "Ready",
 		Status:  metav1.ConditionTrue,
-		Reason:  "Success",
-		Message: "Database migrations completed successfully",
+		Reason:  "MigrationsComplete",
+		Message: fmt.Sprintf("Database migrations completed successfully (version: %d) and gateways are ready", version),
 	})
 
 	if err := r.Status().Update(ctx, &init); err != nil {
@@ -104,6 +143,28 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	logger.Info("reconciled init", "version", version)
 	return ctrl.Result{}, nil
+}
+
+func (r *InitReconciler) checkGateways(ctx context.Context, init *frkrv1.FrkrInit) (bool, error) {
+	if len(init.Spec.Gateways) == 0 {
+		return true, nil
+	}
+
+	for _, name := range init.Spec.Gateways {
+		var dep appsv1.Deployment
+		key := client.ObjectKey{
+			Namespace: init.Namespace,
+			Name:      name,
+		}
+		if err := r.Get(ctx, key, &dep); err != nil {
+			return false, client.IgnoreNotFound(err)
+		}
+		// Check for readiness
+		if dep.Status.AvailableReplicas == 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager

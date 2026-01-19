@@ -5,12 +5,13 @@ import (
 )
 
 // AuthType defines the authentication type
-// +kubebuilder:validation:Enum=basic;oidc
+// +kubebuilder:validation:Enum=basic;oidc;composite
 type AuthType string
 
 const (
-	AuthTypeBasic AuthType = "basic"
-	AuthTypeOIDC  AuthType = "oidc"
+	AuthTypeBasic     AuthType = "basic"
+	AuthTypeOIDC      AuthType = "oidc"
+	AuthTypeComposite AuthType = "composite"
 )
 
 // FrkrAuthConfigSpec defines the desired state of FrkrAuthConfig
