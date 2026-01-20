@@ -40,11 +40,9 @@ func (r *ClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Secret handling
 	clientSecret := crd.Spec.Secret
 	if clientSecret == "" {
-		// Verify if we already have a secret generated
-		// For simplicity, we regenerate if missing in Spec OR we look it up from K8s Secret?
-		// Better to generate once and persist in K8s Secret.
-		// NOTE: UserReconciler generates it and stores in Status. Here we might want to do standard K8s Secret management.
-		
+		// Check if a secret already exists in Kubernetes for this client.
+		// If not, auto-generate a new one and ensure it persists in a K8s Secret.
+
 		secretName := fmt.Sprintf("frkr-client-%s", crd.Name)
 		var existingSecret corev1.Secret
 		err := r.Get(ctx, client.ObjectKey{Name: secretName, Namespace: crd.Namespace}, &existingSecret)
@@ -67,19 +65,16 @@ func (r *ClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	// Persist to DB
 	if r.DB != nil {
-		// Try to resolve stream ID if provided as UUID vs Name?
-		// For now assume StreamID is UUID if provided.
-		// Logic in infra layer handles DB interaction.
-		// Wait, infra.DB doesn't have EnsureClient yet. We need to add it or use db.CreateClient directly.
-		// infra.DB wrappers are convenience. Let's add EnsureClient to infra/db.go or use raw db connection.
-		// Actually, infra.DB has the connection.
-		
+		// Resolve StreamID.
+		// Currently, we expect the Spec.StreamID to be a valid UUID if provided.
+		// The infra layer handles the database interaction to ensure the client exists.
+
 		var streamID *string
 		if crd.Spec.StreamID != "" {
 			s := crd.Spec.StreamID
 			streamID = &s
 		}
-		
+
 		dbClient, err := r.DB.EnsureClient(crd.Spec.TenantID, crd.Spec.ClientID, clientSecret, streamID)
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
@@ -90,7 +85,7 @@ func (r *ClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			log.Error(err, "failed to ensure client in db")
 			return ctrl.Result{}, err
 		}
-		
+
 		crd.Status.ID = dbClient.ID
 		crd.Status.Phase = "Ready"
 	}
@@ -109,7 +104,7 @@ func (r *ClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if err := ctrl.SetControllerReference(&crd, secret, r.Scheme); err != nil {
 		return ctrl.Result{}, err
 	}
-	
+
 	// Apply Secret
 	// ... (simplified apply)
 	existingSecret := &corev1.Secret{}

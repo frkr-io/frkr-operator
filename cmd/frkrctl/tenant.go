@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -99,10 +101,21 @@ var tenantGetCmd = &cobra.Command{
 			return fmt.Errorf("failed to get tenant '%s': %w", name, err)
 		}
 
-		if tenant.Status.ID == "" {
-			fmt.Printf("⚠️  Tenant '%s' exists but has no ID yet (Operator processing...)\n", name)
+		if outputFormat == "json" {
+			out := map[string]string{
+				"id":   tenant.Status.ID,
+				"name": tenant.Name,
+			}
+			if err := json.NewEncoder(os.Stdout).Encode(out); err != nil {
+				return err
+			}
+			// If ID is empty, the consumer will see "id": "" which indicates pending.
 		} else {
-			fmt.Println(tenant.Status.ID)
+			if tenant.Status.ID == "" {
+				fmt.Fprintf(os.Stderr, "⚠️  Tenant '%s' exists but has no ID yet (Operator processing...)\n", name)
+			} else {
+				fmt.Println(tenant.Status.ID)
+			}
 		}
 
 		return nil
