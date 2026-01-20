@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"time"
 
@@ -51,8 +53,10 @@ var userCreateCmd = &cobra.Command{
 			return fmt.Errorf("failed to create user: %w", err)
 		}
 
-		fmt.Printf("✅ User %s created successfully\n", username)
-		fmt.Println("Waiting for password generation...")
+		if outputFormat != "json" {
+			fmt.Printf("✅ User %s created successfully\n", username)
+			fmt.Println("Waiting for password generation...")
+		}
 
 		// Poll for secret
 		timeout := time.After(30 * time.Second)
@@ -62,6 +66,9 @@ var userCreateCmd = &cobra.Command{
 		for {
 			select {
 			case <-timeout:
+				if outputFormat == "json" {
+					return fmt.Errorf("timed out waiting for password")
+				}
 				fmt.Printf("⚠️  Timed out waiting for password. Check status with: kubectl get secret frkr-user-%s -o yaml\n", username)
 				return nil
 			case <-ticker.C:
@@ -71,8 +78,22 @@ var userCreateCmd = &cobra.Command{
 					Namespace: getNamespace(),
 				}, &secret); err == nil {
 					if pass, ok := secret.Data["password"]; ok {
-						fmt.Printf("\n🔑 Password: %s\n\n", string(pass))
-						fmt.Println("Save this password! It will not be shown again.")
+						if outputFormat == "json" {
+							// JSON Output
+							out := map[string]string{
+								"username":  username,
+								"password":  string(pass),
+								"tenant_id": tenantID,
+								"status":    "active",
+							}
+							if err := json.NewEncoder(os.Stdout).Encode(out); err != nil {
+								// Fallback to error
+								return err
+							}
+						} else {
+							fmt.Printf("\n🔑 Password: %s\n\n", string(pass))
+							fmt.Println("Save this password! It will not be shown again.")
+						}
 						return nil
 					}
 				}

@@ -56,7 +56,7 @@ func TestDatabaseCompatibility(t *testing.T) {
 		// Test migrations
 		err = migrate.RunMigrations(connStr)
 		assert.NoError(t, err, "Migrations should succeed on Postgres")
-		
+
 		// Verify version
 		version, dirty, err := migrate.GetVersion(connStr)
 		assert.NoError(t, err)
@@ -71,7 +71,7 @@ func TestDatabaseCompatibility(t *testing.T) {
 		crdbContainer, err := cockroachdb.RunContainer(ctx,
 			testcontainers.WithImage("cockroachdb/cockroach:latest-v23.1"),
 			// CRDB defaults: user=root, no pass, db=defaultdb. We need to create 'frkr'.
-			// The module might not support creating arbitrary DBs easily via params, 
+			// The module might not support creating arbitrary DBs easily via params,
 			// so we use the default and then exec sql, or just use 'defaultdb' for test.
 			// Let's use 'defaultdb' as the target to simplify, migration doesn't care about DB name usually.
 		)
@@ -81,14 +81,14 @@ func TestDatabaseCompatibility(t *testing.T) {
 		// Manually construct connection string to avoid module weirdness
 		host, err := crdbContainer.Host(ctx)
 		require.NoError(t, err)
-		
+
 		port, err := crdbContainer.MappedPort(ctx, "26257/tcp")
 		require.NoError(t, err)
 
 		// CRDB Default: user=root, db=defaultdb, sslmode=disable (insecure)
 		// We use "cockroachdb://" scheme directly
 		crdbConnStr := fmt.Sprintf("cockroachdb://root@%s:%s/defaultdb?sslmode=disable", host, port.Port())
-		
+
 		t.Logf("Testing with URL: %s", crdbConnStr)
 
 		// Test migrations
@@ -112,7 +112,7 @@ func createTempMigrations(t *testing.T) string {
 	upSQL := `CREATE TABLE test_table (id SERIAL PRIMARY KEY, name TEXT);`
 	err = os.WriteFile(filepath.Join(dir, "001_init.up.sql"), []byte(upSQL), 0644)
 	require.NoError(t, err)
-	
+
 	downSQL := `DROP TABLE test_table;`
 	err = os.WriteFile(filepath.Join(dir, "001_init.down.sql"), []byte(downSQL), 0644)
 	require.NoError(t, err)

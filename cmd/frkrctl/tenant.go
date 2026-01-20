@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -77,7 +79,51 @@ var tenantCreateCmd = &cobra.Command{
 	},
 }
 
+var tenantGetCmd = &cobra.Command{
+	Use:   "get [name]",
+	Short: "Get tenant details",
+	Long:  `Get tenant details and ID from the operator (FrkrTenant CRD).`,
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+
+		// Get k8s client
+		k8sClient, err := getK8sClient()
+		if err != nil {
+			return err
+		}
+
+		var tenant frkrv1.FrkrTenant
+		if err := k8sClient.Get(context.Background(), client.ObjectKey{
+			Name:      name,
+			Namespace: getNamespace(),
+		}, &tenant); err != nil {
+			return fmt.Errorf("failed to get tenant '%s': %w", name, err)
+		}
+
+		if outputFormat == "json" {
+			out := map[string]string{
+				"id":   tenant.Status.ID,
+				"name": tenant.Name,
+			}
+			if err := json.NewEncoder(os.Stdout).Encode(out); err != nil {
+				return err
+			}
+			// If ID is empty, the consumer will see "id": "" which indicates pending.
+		} else {
+			if tenant.Status.ID == "" {
+				fmt.Fprintf(os.Stderr, "⚠️  Tenant '%s' exists but has no ID yet (Operator processing...)\n", name)
+			} else {
+				fmt.Println(tenant.Status.ID)
+			}
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	tenantCmd.AddCommand(tenantCreateCmd)
+	tenantCmd.AddCommand(tenantGetCmd)
 	rootCmd.AddCommand(tenantCmd)
 }

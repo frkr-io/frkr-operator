@@ -56,7 +56,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	dataPlane.Status.BrokerConnected = brokerConnected
 	dataPlane.Status.Warnings = warnings
 	dataPlane.Status.Phase = "Active"
-	
+
 	// Determine readiness
 	ready := postgresConnected && brokerConnected
 	status := metav1.ConditionFalse
@@ -67,7 +67,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		reason = "ComponentsHealthy"
 		msg = "All data plane components are connected and healthy"
 	}
-	
+
 	meta.SetStatusCondition(&dataPlane.Status.Conditions, metav1.Condition{
 		Type:    "Ready",
 		Status:  status,
@@ -82,8 +82,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	logger.Info("reconciled data plane")
 	return ctrl.Result{}, nil
 }
-
-
 
 func (r *DataPlaneReconciler) testPostgresConnection(ctx context.Context, dataPlane *frkrv1.FrkrDataPlane) bool {
 	// TODO: Implement actual connection test

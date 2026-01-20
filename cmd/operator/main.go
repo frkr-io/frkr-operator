@@ -61,14 +61,14 @@ func main() {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}
-	
+
 	// Initialize Infra DB
 	infraConfig, err := infra.GetConfigFromEnv()
 	if err != nil {
 		setupLog.Error(err, "unable to get infra config")
 		os.Exit(1)
 	}
-	
+
 	db, err := infra.ConnectInfraDB(infraConfig.DatabaseURL)
 	if err != nil {
 		setupLog.Error(err, "unable to connect to database")

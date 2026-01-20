@@ -57,7 +57,7 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if dataPlane.Spec.PostgresConfig.Type == "cockroachdb" {
 			scheme = "cockroachdb"
 		}
-		
+
 		// Get Password from Secret
 		var secret corev1.Secret
 		password := ""
@@ -121,7 +121,7 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		// Retrying is fine.
 		return ctrl.Result{}, err
 	}
-	
+
 	if !gatewaysReady && len(init.Spec.Gateways) > 0 {
 		logger.Info("waiting for gateways to be ready...", "gateways", init.Spec.Gateways)
 		// Requeue to check again effectively
@@ -138,7 +138,7 @@ func (r *InitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		// Requeue after some time to poll
 		// Controller runtime naturally requeues on status update, but for external resource change (deployments)
-		// we should watch them? We added RBAC but didn't add Watch in SetupWithManager. 
+		// we should watch them? We added RBAC but didn't add Watch in SetupWithManager.
 		// We should add that for responsiveness, or poll. Poll is easier for now.
 		return ctrl.Result{RequeueAfter: 10 * 1000 * 1000 * 1000}, nil // 10s
 	}

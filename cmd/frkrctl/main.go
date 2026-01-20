@@ -12,6 +12,12 @@ var rootCmd = &cobra.Command{
 	Long:  `frkrctl provides a developer-friendly interface to the Kubernetes operator via CRDs.`,
 }
 
+var outputFormat string
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text, json)")
+}
+
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
