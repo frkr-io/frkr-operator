@@ -40,12 +40,18 @@ var clientCreateCmd = &cobra.Command{
 			return err
 		}
 
+		// Get namespace
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		// Create FrkrClient CRD
 		crdName := fmt.Sprintf("%s-client", clientID)
 		crd := &frkrv1.FrkrClient{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      crdName,
-				Namespace: getNamespace(),
+				Namespace: ns,
 			},
 			Spec: frkrv1.FrkrClientSpec{
 				TenantID: tenantID,
@@ -78,7 +84,7 @@ var clientCreateCmd = &cobra.Command{
 				var secret corev1.Secret
 				if err := k8sClient.Get(context.Background(), client.ObjectKey{
 					Name:      secretName,
-					Namespace: getNamespace(),
+					Namespace: ns,
 				}, &secret); err == nil {
 					clientSecret := string(secret.Data["clientSecret"])
 					if clientSecret != "" {
@@ -103,8 +109,13 @@ var clientListCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var list frkrv1.FrkrClientList
-		if err := k8sClient.List(context.Background(), &list, client.InNamespace(getNamespace())); err != nil {
+		if err := k8sClient.List(context.Background(), &list, client.InNamespace(ns)); err != nil {
 			return fmt.Errorf("failed to list clients: %w", err)
 		}
 

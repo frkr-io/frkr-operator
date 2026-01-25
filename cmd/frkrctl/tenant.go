@@ -34,11 +34,17 @@ var tenantCreateCmd = &cobra.Command{
 			return err
 		}
 
+		// Get namespace
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		// Create FrkrTenant CRD
 		tenant := &frkrv1.FrkrTenant{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: getNamespace(),
+				Namespace: ns,
 			},
 			Spec: frkrv1.FrkrTenantSpec{
 				Name: name,
@@ -66,7 +72,7 @@ var tenantCreateCmd = &cobra.Command{
 				var updatedTenant frkrv1.FrkrTenant
 				if err := k8sClient.Get(context.Background(), client.ObjectKey{
 					Name:      name,
-					Namespace: getNamespace(),
+					Namespace: ns,
 				}, &updatedTenant); err == nil {
 					if updatedTenant.Status.ID != "" {
 						fmt.Printf("\n✅ Tenant ready!\n")
@@ -93,10 +99,15 @@ var tenantGetCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var tenant frkrv1.FrkrTenant
 		if err := k8sClient.Get(context.Background(), client.ObjectKey{
 			Name:      name,
-			Namespace: getNamespace(),
+			Namespace: ns,
 		}, &tenant); err != nil {
 			return fmt.Errorf("failed to get tenant '%s': %w", name, err)
 		}

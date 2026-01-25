@@ -51,11 +51,17 @@ var streamCreateCmd = &cobra.Command{
 			return err
 		}
 
+		// Get namespace
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		// Create FrkrStream CRD
 		stream := &frkrv1.FrkrStream{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      streamName,
-				Namespace: getNamespace(),
+				Namespace: ns,
 			},
 			Spec: frkrv1.FrkrStreamSpec{
 				TenantID:      tenantID,
@@ -85,8 +91,13 @@ var streamListCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var streamList frkrv1.FrkrStreamList
-		if err := k8sClient.List(context.Background(), &streamList, client.InNamespace(getNamespace())); err != nil {
+		if err := k8sClient.List(context.Background(), &streamList, client.InNamespace(ns)); err != nil {
 			return fmt.Errorf("failed to list streams: %w", err)
 		}
 

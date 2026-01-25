@@ -37,11 +37,17 @@ var userCreateCmd = &cobra.Command{
 			return err
 		}
 
+		// Get namespace
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		// Create FrkrUser CRD
 		user := &frkrv1.FrkrUser{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      username,
-				Namespace: getNamespace(),
+				Namespace: ns,
 			},
 			Spec: frkrv1.FrkrUserSpec{
 				Username: username,
@@ -59,7 +65,8 @@ var userCreateCmd = &cobra.Command{
 		}
 
 		// Poll for secret
-		timeout := time.After(30 * time.Second)
+		timeoutSeconds, _ := cmd.Flags().GetInt("timeout")
+		timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -67,15 +74,15 @@ var userCreateCmd = &cobra.Command{
 			select {
 			case <-timeout:
 				if outputFormat == "json" {
-					return fmt.Errorf("timed out waiting for password")
+					return fmt.Errorf("timed out waiting for password (%ds)", timeoutSeconds)
 				}
-				fmt.Printf("⚠️  Timed out waiting for password. Check status with: kubectl get secret frkr-user-%s -o yaml\n", username)
+				fmt.Printf("⚠️  Timed out waiting for password (%ds). Check status with: kubectl get secret frkr-user-%s -o yaml\n", timeoutSeconds, username)
 				return nil
 			case <-ticker.C:
 				var secret corev1.Secret
 				if err := k8sClient.Get(context.Background(), client.ObjectKey{
 					Name:      fmt.Sprintf("frkr-user-%s", username),
-					Namespace: getNamespace(),
+					Namespace: ns,
 				}, &secret); err == nil {
 					if pass, ok := secret.Data["password"]; ok {
 						if outputFormat == "json" {
@@ -112,8 +119,13 @@ var userListCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var userList frkrv1.FrkrUserList
-		if err := k8sClient.List(context.Background(), &userList, client.InNamespace(getNamespace())); err != nil {
+		if err := k8sClient.List(context.Background(), &userList, client.InNamespace(ns)); err != nil {
 			return fmt.Errorf("failed to list users: %w", err)
 		}
 
@@ -148,10 +160,15 @@ var userResetPasswordCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var user frkrv1.FrkrUser
 		if err := k8sClient.Get(context.Background(), client.ObjectKey{
 			Name:      username,
-			Namespace: getNamespace(),
+			Namespace: ns,
 		}, &user); err != nil {
 			return fmt.Errorf("failed to get user: %w", err)
 		}
@@ -181,10 +198,15 @@ var userDeleteCmd = &cobra.Command{
 			return err
 		}
 
+		ns, err := getNamespace()
+		if err != nil {
+			return err
+		}
+
 		var user frkrv1.FrkrUser
 		if err := k8sClient.Get(context.Background(), client.ObjectKey{
 			Name:      username,
-			Namespace: getNamespace(),
+			Namespace: ns,
 		}, &user); err != nil {
 			return fmt.Errorf("failed to get user: %w", err)
 		}
@@ -200,6 +222,7 @@ var userDeleteCmd = &cobra.Command{
 
 func init() {
 	userCreateCmd.Flags().String("tenant-id", "", "Tenant ID (required)")
+	userCreateCmd.Flags().Int("timeout", 90, "Timeout in seconds to wait for password generation")
 	userCmd.AddCommand(userCreateCmd)
 	userCmd.AddCommand(userListCmd)
 	userCmd.AddCommand(userResetPasswordCmd)
